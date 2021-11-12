@@ -1,12 +1,8 @@
 rm ServeFoundryRedirect.zip
-
-chmod 644 $(find . -type f)
-chmod 755 $(find . -type d)
-mv node_modules node_modules_tmp
 npm install
-
 tsc
 
+mv node_modules node_modules_tmp
 npm install --only=prod
 
 chmod 644 $(find . -type f)
