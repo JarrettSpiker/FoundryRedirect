@@ -87,5 +87,13 @@ async function routePublicId(event:APIGatewayProxyEvent): Promise<APIGatewayProx
 }
 
 export const handler = async (event:APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    return routeEvent(event);
+    return routeEvent(event).then(res =>{
+        if(!res.headers){
+            res.headers = {}
+        }
+        res.headers["Access-Control-Allow-Headers"] =  "Content-Type";
+        res.headers["Access-Control-Allow-Origin"] = "*";
+        res.headers["Access-Control-Allow-Methods"] = "OPTIONS,POST,GET";
+        return res;
+    });
 };
