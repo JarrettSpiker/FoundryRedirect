@@ -1,18 +1,24 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import { checkCustomPublicId, customizePublicId } from "./customizeRedirect";
 import { serveFoundryRedirect } from "./serveRedirect";
 import { getRedirectUrlForFoundry, storeFoundryRedirect } from "./storeRedirect";
 
-const URL_PUBLIC_ID_KEY = "publicId"
-const URL_RESOURCE_LOCAL = "/local"
+const URL_PUBLIC_ID_KEY = "publicId";
+const URL_RESOURCE_LOCAL = "/local";
+const URL_RESOURCE_CUSTOMIZE = "/apiCustomize";
 
 namespace RootApiQueryStrings {
     export const FoundryId = 'foundry_id';
     export const ExternalIp = 'external_address';
     export const InternalIp = 'internal_address';
+
+    export const PublicId = 'public_id';
 }
 
 async function routeEvent(event:APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-    if(event.resource.startsWith(`/{${URL_PUBLIC_ID_KEY}`)){
+    if(event.resource.startsWith(URL_RESOURCE_CUSTOMIZE)) {
+        return routeCustomizeRequest(event);
+    } else if(event.resource.startsWith(`/{${URL_PUBLIC_ID_KEY}`)){
         return routePublicId(event);
     } else if(event.resource === "/"){
         return routeRootRequest(event);
@@ -33,7 +39,7 @@ async function routeRootRequest(event:APIGatewayProxyEvent): Promise<APIGatewayP
     if(!foundryId){
         return {
             statusCode: 400,
-            body : JSON.stringify(`Required parameter ${RootApiQueryStrings.FoundryId} missing`)
+            body : JSON.stringify(`Required parameter ${RootApiQueryStrings.FoundryId} is missing`)
         };
     }
 
@@ -45,14 +51,14 @@ async function routeRootRequest(event:APIGatewayProxyEvent): Promise<APIGatewayP
             if(!externalIp){
                 return {
                     statusCode: 400,
-                    body : JSON.stringify(`Required parameter ${RootApiQueryStrings.ExternalIp} missing`)
+                    body : JSON.stringify(`Required parameter ${RootApiQueryStrings.ExternalIp} is missing`)
                 };
             }
             let localIp = queryParameters[RootApiQueryStrings.InternalIp];
             if(!localIp){
                 return {
                     statusCode: 400,
-                    body : JSON.stringify(`Required parameter ${RootApiQueryStrings.InternalIp} missing`)
+                    body : JSON.stringify(`Required parameter ${RootApiQueryStrings.InternalIp} is missing`)
                 };
             }
             return storeFoundryRedirect(foundryId, externalIp, localIp);
@@ -84,6 +90,39 @@ async function routePublicId(event:APIGatewayProxyEvent): Promise<APIGatewayProx
     }
     let isLocal = event.resource.endsWith(URL_RESOURCE_LOCAL)
     return serveFoundryRedirect(publicId, isLocal);
+}
+
+async function routeCustomizeRequest(event:APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+    // supported requests to /customize are:
+    // - GET (publicId) -> returns whether the public ID is available
+    // - POST (foundryId, publicId) -> changes the publicId for the given foundryId
+    let queryParameters : {[key:string]:string}  = event.queryStringParameters ?? {}
+    let publicId = queryParameters[RootApiQueryStrings.PublicId];
+    if(!publicId){
+        return {
+            statusCode: 400,
+            body : JSON.stringify(`Required parameter ${RootApiQueryStrings.PublicId} is missing`)
+        };
+    }
+
+    switch(event.httpMethod){
+        case "GET":
+            return checkCustomPublicId(publicId);
+        case "POST":
+            let foundryId = queryParameters[RootApiQueryStrings.FoundryId];
+            if(!foundryId){
+                return {
+                    statusCode: 400,
+                    body : JSON.stringify(`Required parameter ${RootApiQueryStrings.FoundryId} is missing`)
+                };
+            }
+            return customizePublicId(foundryId, publicId);
+        default:
+            return {
+                statusCode: 405,
+                body : JSON.stringify(`${event.httpMethod} not supported on ${event.resource}`)
+            }
+    }
 }
 
 export const handler = async (event:APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {

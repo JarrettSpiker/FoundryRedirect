@@ -1,7 +1,9 @@
 import { APIGatewayProxyResult } from "aws-lambda";
-import { dbDocClient, TABLE_NAME, TableKeys, RedirectTableItem } from "./db";
+import { dbDocClient, TABLE_NAME, RedirectTableItem } from "./db";
 import * as uuid from "uuid";
 import { publicIdToAddress } from "./utils";
+import { isPublicIdAvailable } from "./customizeRedirect";
+import { getEntryForFoundryId } from "./queries";
 
 export async function storeFoundryRedirect(foundryId:string, externalAddress:string, localAddress:string) : Promise<APIGatewayProxyResult> {
     console.log("Checking for existing entry with Id " + foundryId);
@@ -34,7 +36,20 @@ export async function storeFoundryRedirect(foundryId:string, externalAddress:str
             console.log("New foundry instance. Updating...");
             let newPublicId = uuid.v1();
             
-            // TODO sanity check that the uuid doesn't exist already
+            // sanity check that the uuid doesn't exist already
+            let sanityCount = 0;
+            while(!isPublicIdAvailable(newPublicId)){
+                newPublicId = uuid.v1();
+                sanityCount += 1;
+                // out of paranoia, only try this 100 times to prevent
+                // an infinite loop if uuid always returns the same thing
+                if(sanityCount > 100){
+                    return {
+                        statusCode: 500,
+                        body: JSON.stringify("Error generating unique redirect address")
+                    };
+                }
+            }
 
             const tableItem : RedirectTableItem  = {
                 public_id : newPublicId,
@@ -85,23 +100,5 @@ export async function getRedirectUrlForFoundry(foundryId:string) : Promise<APIGa
             statusCode: 500,
             body: JSON.stringify(err)
         };
-    }
-}
-
-
-async function getEntryForFoundryId(foundryId:string): Promise<RedirectTableItem|undefined>{
-    const queryPromise = dbDocClient.query({
-        TableName: TABLE_NAME,
-        ExpressionAttributeNames: {
-            "#f": `${TableKeys.FoundryIdKey}`
-        },
-        ExpressionAttributeValues: {
-            ':f' : foundryId
-        },
-        KeyConditionExpression: '#f = :f',
-    }).promise();
-    const result = await queryPromise;
-    if(result.Count > 0) {
-        return <RedirectTableItem> result.Items[0];
     }
 }

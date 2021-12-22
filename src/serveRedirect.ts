@@ -1,21 +1,11 @@
 import { APIGatewayProxyResult } from "aws-lambda";
-import { dbDocClient, TABLE_NAME, TableKeys, RedirectTableItem } from "./db";
+import { RedirectTableItem } from "./db";
+import { scanForRowWithPublicId } from "./queries";
 
 export async function serveFoundryRedirect(id:string, isLocal:boolean) : Promise<APIGatewayProxyResult> {
     try {
         // check the database for an entry with publicId = id
-        const fetchQuery = dbDocClient.scan({
-            TableName: TABLE_NAME,
-            ExpressionAttributeNames: {
-                "#f": `${TableKeys.PublicIdKey}`
-            },
-            ExpressionAttributeValues: {
-                ':f' : id
-            },
-            FilterExpression: '#f = :f',
-        });
-
-        const queryRes = await fetchQuery.promise();
+        const queryRes = await scanForRowWithPublicId(id);
         if(queryRes.Count === 0){
             return {
                 statusCode: 404,
