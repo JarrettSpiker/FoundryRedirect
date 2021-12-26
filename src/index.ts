@@ -5,7 +5,7 @@ import { getRedirectUrlForFoundry, storeFoundryRedirect } from "./storeRedirect"
 
 const URL_PUBLIC_ID_KEY = "publicId";
 const URL_RESOURCE_LOCAL = "/local";
-const URL_RESOURCE_CUSTOMIZE = "/apiCustomize";
+const URL_RESOURCE_CUSTOMIZE = "/api/customize";
 
 namespace RootApiQueryStrings {
     export const FoundryId = 'foundry_id';
@@ -93,7 +93,7 @@ async function routePublicId(event:APIGatewayProxyEvent): Promise<APIGatewayProx
 }
 
 async function routeCustomizeRequest(event:APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-    // supported requests to /customize are:
+    // supported requests to /api/customize are:
     // - GET (publicId) -> returns whether the public ID is available
     // - POST (foundryId, publicId) -> changes the publicId for the given foundryId
     let queryParameters : {[key:string]:string}  = event.queryStringParameters ?? {}
