@@ -65,9 +65,9 @@ export async function customizePublicId(foundryId:string, publicId:string) : Pro
 }
  
 export async function isPublicIdAvailable(publicId:string) : Promise<boolean> {
-    const quesry = scanForRowWithPublicId(publicId);
-    return quesry.then(queryRes =>{
-        return queryRes.Count > 0;
+    const query = scanForRowWithPublicId(publicId);
+    return query.then(rows =>{
+        return rows.Count === 0;
     }).catch(error => {
         console.log(error);
         return false;
