@@ -5,11 +5,11 @@ import { getEntryForFoundryId, scanForRowWithPublicId } from "./queries";
 export async function checkCustomPublicId(publicId:string) : Promise<APIGatewayProxyResult> {
     
     // check for illegal characters
-    let isAplphaNumeric = publicId.match(/^[0-9a-zA-Z]+$/)
-    if(!isAplphaNumeric){
+    let isAlphaNumeric = publicId.match(/^[0-9a-zA-Z_\-]+$/)
+    if(!isAlphaNumeric){
         return  {
             statusCode: 400,
-            body: JSON.stringify("Custom addresses must contain only letters and numbers"),
+            body: JSON.stringify("Custom addresses must contain only letters, numbers, hyphens, and underscores"),
         }
     }
 
@@ -21,16 +21,16 @@ export async function checkCustomPublicId(publicId:string) : Promise<APIGatewayP
         }
     }
     
-    let isAvaialble = await isPublicIdAvailable(publicId);
-    if(isAvaialble){
+    let isAvailable = await isPublicIdAvailable(publicId);
+    if(isAvailable){
         return {
             statusCode : 200,
-            body: JSON.stringify(`Custom address ${publicId} is avaialable`)
+            body: JSON.stringify(`Custom address ${publicId} is available`)
         }
     } else {
         return {
             statusCode : 406,
-            body: JSON.stringify(`Custom address ${publicId} is not avaialable`)
+            body: JSON.stringify(`Custom address ${publicId} is not available`)
         }
     }
 }
